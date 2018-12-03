@@ -48,5 +48,6 @@ public class Client {
                     break;
             }
         }
+        System.exit(0);
     }
 }
