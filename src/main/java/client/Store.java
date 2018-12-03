@@ -14,7 +14,7 @@ import io.atomix.cluster.messaging.impl.NettyMessagingService;
 import io.atomix.utils.net.Address;
 import io.atomix.utils.serializer.Serializer;
 
-class Store {
+class Store implements common.Store {
     private final int clientID;
     private int transactionID = 0;
 
@@ -23,6 +23,7 @@ class Store {
 
     private final Map<Integer, CompletableFuture<Boolean>> putCompletableFutures;
     private final Map<Integer, CompletableFuture<Map<Long, byte[]>>> getCompletableFutures;
+
     Store(final int clientID) {
         this.clientID = clientID;
         this.serializer = Util.getSerializer();
@@ -43,7 +44,8 @@ class Store {
         this.getCompletableFutures = new HashMap<>();
     }
 
-    CompletableFuture<Boolean> put(final Map<Long, byte[]> values) {
+    @Override
+    public CompletableFuture<Boolean> put(final Map<Long, byte[]> values) {
         final var t = new CompletableFuture<Boolean>();
         this.putCompletableFutures.put(this.transactionID, t);
         this.messagingService.sendAsync(Address.from("localhost:11110"),
@@ -52,7 +54,8 @@ class Store {
         return t;
     }
 
-    CompletableFuture<Map<Long, byte[]>> get(final Collection<Long> keys) {
+    @Override
+    public CompletableFuture<Map<Long, byte[]>> get(final Collection<Long> keys) {
         final var t = new CompletableFuture<Map<Long, byte[]>>();
         this.getCompletableFutures.put(this.transactionID, t);
         this.messagingService.sendAsync(Address.from("localhost:11110"),

@@ -7,8 +7,12 @@ import java.util.concurrent.ExecutionException;
 public class Client {
 
     public static void main(final String[] args) {
+
         final var store = new Store(Integer.parseInt(args[0]));
         final var values = new HashMap<Long, byte[]>();
+
+        final var numOps = 1000;
+        
 
         for (long i = 0; i < 10; i++) {
             values.put(i, ("Hello" + i).getBytes());
