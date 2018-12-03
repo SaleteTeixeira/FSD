@@ -22,7 +22,7 @@ public class Coordinator {
             final PutRequest request = serializer.decode(bytes);
             System.out.println(request.toString());
             store.put(request.getValues());
-            // map.putAll(request.getValues());
+            map.putAll(request.getValues());
             messagingService.sendAsync(origin,
                     "put",
                     serializer.encode(new PutReply(request.getClientID(),
@@ -34,7 +34,7 @@ public class Coordinator {
             final GetRequest request = serializer.decode(bytes);
             System.out.println(request.toString());
             final var temp = new HashMap<Long, byte[]>();
-            //request.getKeys().forEach((k) -> temp.put(k, map.get(k)));
+            request.getKeys().forEach((k) -> temp.put(k, map.get(k)));
             messagingService.sendAsync(origin,
                     "get",
                     serializer.encode(new GetReply(request.getClientID(),
