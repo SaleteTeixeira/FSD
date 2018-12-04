@@ -5,8 +5,8 @@ import java.util.Collection;
 public class GetRequest extends Message {
     private final Collection<Long> keys;
 
-    public GetRequest(final int clientID, final int transactionID, final Collection<Long> keys) {
-        super(clientID, transactionID);
+    public GetRequest(final int requestID, final Collection<Long> keys) {
+        super(requestID);
         this.keys = keys;
     }
 

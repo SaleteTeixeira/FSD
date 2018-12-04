@@ -5,8 +5,8 @@ import java.util.Map;
 public class GetReply extends Message {
     private final Map<Long, byte[]> values;
 
-    public GetReply(final int clientID, final int transactionID, final Map<Long, byte[]> values) {
-        super(clientID, transactionID);
+    public GetReply(final int requestID, final Map<Long, byte[]> values) {
+        super(requestID);
         this.values = values;
     }
 

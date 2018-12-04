@@ -1,27 +1,20 @@
 package common;
 
 public abstract class Message {
-    private final int clientID;
-    private final int transactionID;
+    private final int requestID;
 
-    Message(final int clientID, final int transactionID) {
-        this.clientID = clientID;
-        this.transactionID = transactionID;
+    Message(final int requestID) {
+        this.requestID = requestID;
     }
 
-    public int getClientID() {
-        return this.clientID;
-    }
-
-    public int getTransactionID() {
-        return this.transactionID;
+    public int getRequestID() {
+        return this.requestID;
     }
 
     @Override
     public String toString() {
         return "Message{" +
-                "clientID=" + this.clientID +
-                ", transactionID=" + this.transactionID +
+                ", requestID=" + this.requestID +
                 '}';
     }
 }
