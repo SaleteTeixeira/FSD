@@ -1,36 +1,48 @@
 package coordinator;
 
-import common.GetReply;
-import common.PutReply;
-import common.Util;
+import common.*;
 import io.atomix.cluster.messaging.ManagedMessagingService;
 import io.atomix.cluster.messaging.impl.NettyMessagingService;
 import io.atomix.utils.net.Address;
 import io.atomix.utils.serializer.Serializer;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class Store implements common.Store {
+public class Store {
     private final Serializer s;
     private final ManagedMessagingService ms;
     private final ExecutorService es;
     private Address[] servers;
-    private int transactionID;
+
+    private final Map<AtomicInteger, CompletableFuture<Boolean>> putCompletableFutures;
+    private final Map<AtomicInteger, CompletableFuture<Map<Long, byte[]>>> getCompletableFutures;
+    private final Map<AtomicInteger, Integer> getCompletableFuturesCount;
+
+    private AtomicInteger transactionID = null;
 
     public Store() {
         this.s = Util.getSerializer();
         this.ms = NettyMessagingService.builder()
                 .withAddress(Address.from("localhost:22222"))
                 .build();
-        final ExecutorService es = Executors.newSingleThreadExecutor();
-        this.servers = new Address[]{Address.from(12345), Address.from(12346), Address.from(12347)};
-        this.transactionID = 0;
         this.es = Executors.newSingleThreadExecutor();
+
+        this.ms.registerHandler("put", this::handlePut, es);
+        this.ms.registerHandler("get", this::handleGet, es);
+
+        this.servers = new Address[]{Address.from("localhost:12345"), Address.from("localhost:12346"), Address.from("localhost:12347")};
+        this.transactionID.set(-1);
+
+        this.putCompletableFutures = new HashMap<>();
+        this.getCompletableFutures = new HashMap<>();
+        this.getCompletableFuturesCount = new HashMap<>();
 
         try {
             this.ms.start().get();
@@ -40,39 +52,66 @@ public class Store implements common.Store {
         }
     }
 
-    @Override
-    public CompletableFuture<Boolean> put(final Map<Long, byte[]> values) {
-        CompletableFuture<Boolean> result = new CompletableFuture<>();
+    public CompletableFuture<Boolean> put(final int requestID, final Map<Long, byte[]> values) {
+        final var t = new CompletableFuture<Boolean>();
+        this.transactionID.getAndIncrement();
+        this.putCompletableFutures.put(this.transactionID, t);
 
-        //falta enviar um PutRequest para cada um dos servidores necessários
+        for(Long key : values.keySet()){
+            int serv_id = (int) (key%(servers.length));
 
-        //nao sei se isto está bem, falta retirar o valor do result, temos que juntar o resultado de todas as mensagens recebidas
-        this.ms.registerHandler("putServer", (o,m) -> {
-            final PutReply reply = s.decode(m);
-            //falta completar
+            ms.sendAsync(servers[serv_id],
+                "put",
+                s.encode(new PutRequest(requestID, this.transactionID, values))
+            );
+        }
 
-        }, this.es);
-
-        this.transactionID++;
-
-        return result;
+        return t;
     }
 
-    @Override
-    public CompletableFuture<Map<Long, byte[]>> get(final Collection<Long> keys) {
-        CompletableFuture<Map<Long, byte[]>> values = new CompletableFuture<>();
+    public CompletableFuture<Map<Long, byte[]>> get(final int requestID, final Collection<Long> keys) {
+        final var t = new CompletableFuture<Map<Long, byte[]>>();
+        this.transactionID.getAndIncrement();
+        this.getCompletableFutures.put(this.transactionID, t);
 
-        //falta enviar um GetRequest para cada um dos servidores necessários
+        for(Long key : keys){
+            int serv_id = (int) (key%(servers.length));
 
-        //nao sei se isto está bem, falta retirar o valor do values, temos que juntar o resultado de todas as mensagens recebidas
-        this.ms.registerHandler("getServer", (o,m) -> {
-            final GetReply reply = s.decode(m);
-            //falta completar
+            ms.sendAsync(servers[serv_id],
+                    "get",
+                    s.encode(new GetRequest(requestID, this.transactionID, keys))
+            );
+        }
+        return t;
+    }
 
-        }, this.es);
+    private void handlePut(final Address origin, final byte[] bytes) {
+        boolean stop=false;
 
-        this.transactionID++;
+        for(int i=0; i<servers.length && !stop; i++){
+            if(origin.equals(servers[i])) {
+                stop=true;
 
-        return values;
+                final PutReply reply = this.s.decode(bytes);
+                this.putCompletableFutures.get(reply.getTransactionID()).complete(reply.getValue());
+            }
+        }
+    }
+
+    private void handleGet(final Address origin, final byte[] bytes) {
+
+        //DUVIDA: ele recebe várias respostas ao GET porque manda get para os servidores que tiverem as chaves
+        //mas a resposta é só um CompletableFuture<Map<Long, byte[]>>, não uma coleção deles
+
+        boolean stop=false;
+
+        for(int i=0; i<servers.length && !stop; i++){
+            if(origin.equals(servers[i])) {
+                stop=true;
+
+                final GetReply reply = this.s.decode(bytes);
+                this.getCompletableFutures.get(reply.getTransactionID()).complete(reply.getValues());
+            }
+        }
     }
 }

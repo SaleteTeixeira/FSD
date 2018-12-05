@@ -1,6 +1,5 @@
 package client;
 
-
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -43,23 +42,21 @@ class Store implements common.Store {
         this.getCompletableFutures = new HashMap<>();
     }
 
-    @Override
     public CompletableFuture<Boolean> put(final Map<Long, byte[]> values) {
         final var t = new CompletableFuture<Boolean>();
         this.putCompletableFutures.put(this.requestID, t);
         this.ms.sendAsync(Util.getCoordinator(),
                 "put",
-                this.s.encode(new PutRequest(this.requestID++, values)));
+                this.s.encode(new PutRequest(this.requestID++, null, values)));
         return t;
     }
 
-    @Override
     public CompletableFuture<Map<Long, byte[]>> get(final Collection<Long> keys) {
         final var t = new CompletableFuture<Map<Long, byte[]>>();
         this.getCompletableFutures.put(this.requestID, t);
         this.ms.sendAsync(Util.getCoordinator(),
                 "get",
-                this.s.encode(new GetRequest(this.requestID++, keys)));
+                this.s.encode(new GetRequest(this.requestID++, null, keys)));
         return t;
     }
 
