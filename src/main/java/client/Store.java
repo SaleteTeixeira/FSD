@@ -42,6 +42,7 @@ class Store implements common.Store {
         this.getCompletableFutures = new HashMap<>();
     }
 
+    @Override
     public CompletableFuture<Boolean> put(final Map<Long, byte[]> values) {
         final var t = new CompletableFuture<Boolean>();
         this.putCompletableFutures.put(this.requestID, t);
@@ -51,6 +52,7 @@ class Store implements common.Store {
         return t;
     }
 
+    @Override
     public CompletableFuture<Map<Long, byte[]>> get(final Collection<Long> keys) {
         final var t = new CompletableFuture<Map<Long, byte[]>>();
         this.getCompletableFutures.put(this.requestID, t);
