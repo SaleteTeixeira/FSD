@@ -12,14 +12,15 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Server {
 
     public static void main(String[] args){
         final Serializer s = Util.getSerializer();
         final ManagedMessagingService ms = NettyMessagingService.builder()
-                .withAddress(Address.from(12345))
-                .build();
+                                                                .withAddress(Address.from(args[0]))
+                                                                .build();
         final ExecutorService es = Executors.newSingleThreadExecutor();
         final Map<Long, byte[]> data = new HashMap<>();
         final Map<Long, Integer> clock = new HashMap<>();
@@ -34,8 +35,11 @@ public class Server {
                 }
             }
 
-            ms.sendAsync(o,"putServer",
-                    s.encode(new PutReply(request.getRequestID(), true))
+            AtomicInteger transactionID = null;
+            transactionID.set(request.getTransactionID());
+
+            ms.sendAsync(o,"put",
+                    s.encode(new PutReply(request.getRequestID(), transactionID, true))
             );
         }, es);
 
@@ -44,8 +48,11 @@ public class Server {
 
             Map<Long, byte[]> result = insert(request.getKeys(), data);
 
-            ms.sendAsync(o,"getServer",
-                    s.encode(new GetReply(request.getRequestID(),result))
+            AtomicInteger transactionID = null;
+            transactionID.set(request.getTransactionID());
+
+            ms.sendAsync(o,"get",
+                    s.encode(new GetReply(request.getRequestID(), transactionID, result))
             );
         }, es);
 

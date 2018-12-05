@@ -1,6 +1,5 @@
 package client;
 
-
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -49,7 +48,7 @@ class Store implements common.Store {
         this.putCompletableFutures.put(this.requestID, t);
         this.ms.sendAsync(Util.getCoordinator(),
                 "put",
-                this.s.encode(new PutRequest(this.requestID++, values)));
+                this.s.encode(new PutRequest(this.requestID++, null, values)));
         return t;
     }
 
@@ -59,7 +58,7 @@ class Store implements common.Store {
         this.getCompletableFutures.put(this.requestID, t);
         this.ms.sendAsync(Util.getCoordinator(),
                 "get",
-                this.s.encode(new GetRequest(this.requestID++, keys)));
+                this.s.encode(new GetRequest(this.requestID++, null, keys)));
         return t;
     }
 

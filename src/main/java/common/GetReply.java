@@ -1,12 +1,13 @@
 package common;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class GetReply extends Message {
     private final Map<Long, byte[]> values;
 
-    public GetReply(final int requestID, final Map<Long, byte[]> values) {
-        super(requestID);
+    public GetReply(final int requestID, final AtomicInteger transactionID, final Map<Long, byte[]> values) {
+        super(requestID, transactionID);
         this.values = values;
     }
 
