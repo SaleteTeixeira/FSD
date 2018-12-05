@@ -6,6 +6,7 @@ import io.atomix.cluster.messaging.impl.NettyMessagingService;
 import io.atomix.utils.net.Address;
 import io.atomix.utils.serializer.Serializer;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -24,32 +25,27 @@ public class Server {
         final Map<Long, Integer> clock = new HashMap<>();
 
         ms.registerHandler("put", (o,m) -> {
-            boolean result;
-            final PutServerRequest request = s.decode(m);
+            final PutRequest request = s.decode(m);
 
-            if(acceptInsertion(clock, request.getTransactionID(), request.getValues())){
-                for(Map.Entry<Long, byte[]> entry: request.getValues().entrySet()){
+            for(Map.Entry<Long, byte[]> entry: request.getValues().entrySet()){
+                if(change_value(clock, entry.getKey(), request.getRequestID())){
                     data.put(entry.getKey(), entry.getValue());
-                    clock.put(entry.getKey(), request.getTransactionID());
+                    clock.put(entry.getKey(), request.getRequestID());
                 }
-                result = true;
             }
-            else result = false;
 
             ms.sendAsync(o,"putServer",
-                    s.encode(new PutServerReply(request.getTransactionID(), result))
+                    s.encode(new PutReply(request.getRequestID(), true))
             );
         }, es);
 
         ms.registerHandler("get", (o,m) -> {
-            final GetServerRequest request = s.decode(m);
-            System.out.println(request.toString());
+            final GetRequest request = s.decode(m);
 
-            Map<Long, byte[]> tmp = new HashMap<>();
-            request.getKeys().forEach(k -> {byte[] v = data.get(k); tmp.put(k,v);});
+            Map<Long, byte[]> result = insert(request.getKeys(), data);
 
             ms.sendAsync(o,"getServer",
-                    s.encode(new GetServerReply(request.getTransactionID(),tmp))
+                    s.encode(new GetReply(request.getRequestID(),result))
             );
         }, es);
 
@@ -60,12 +56,17 @@ public class Server {
         }
     }
 
-    public static boolean acceptInsertion(Map<Long, Integer> clock, int transactionID, Map<Long, byte[]> values){
-        for(Map.Entry<Long, byte[]> entry: values.entrySet()){
-            if(clock.containsKey(entry.getKey()))
-                if(clock.get(entry.getKey()) >= transactionID) return false;
-        }
+    public static boolean change_value(Map<Long, Integer> clock, long key, int transactionID){
+        if(clock.containsKey(key))
+            if(clock.get(key) >= transactionID) return false;
 
         return true;
+    }
+
+    public static Map<Long, byte[]> insert(Collection<Long> keys, Map<Long, byte[]> data){
+        Map<Long, byte[]> tmp = new HashMap<>();
+        keys.forEach(k -> {byte[] v = data.get(k); tmp.put(k,v);});
+
+        return tmp;
     }
 }

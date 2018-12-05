@@ -27,8 +27,7 @@ public class Coordinator {
             System.out.println(request.toString());
             CompletableFuture<Boolean> result = store.put(request.getValues());
             ms.sendAsync(o,"put",
-                    s.encode(new PutReply(request.getClientID(),
-                            request.getTransactionID(),
+                    s.encode(new PutReply(request.getRequestID(),
                             //result))      //não me lembro como se faz, porque no PutReply está boolena e o result é um CompletableFuture
             );
         }, es);
@@ -39,8 +38,7 @@ public class Coordinator {
 
             CompletableFuture<Map<Long, byte[]>> result = store.get(request.getKeys());
             ms.sendAsync(o,"get",
-                    s.encode(new GetReply(request.getClientID(),
-                            request.getTransactionID(),
+                    s.encode(new GetReply(request.getRequestID(),
                             //result))      //não me lembro como se faz, porque no GetReply está boolena e o result é um CompletableFuture
             );
         }, es);

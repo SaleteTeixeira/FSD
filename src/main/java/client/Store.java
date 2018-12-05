@@ -22,7 +22,7 @@ class Store implements common.Store {
     private final Map<Integer, CompletableFuture<Boolean>> putCompletableFutures;
     private final Map<Integer, CompletableFuture<Map<Long, byte[]>>> getCompletableFutures;
 
-    Store(final int clientID) {
+    public Store(final int clientID) {
         this.s = Util.getSerializer();
         this.ms = NettyMessagingService.builder()
                 .withAddress(Address.from("localhost:" + (22220 + clientID)))
@@ -45,7 +45,7 @@ class Store implements common.Store {
 
     @Override
     public CompletableFuture<Boolean> put(final Map<Long, byte[]> values) {
-        final CompletableFuture<Boolean> t = new CompletableFuture<>();
+        final var t = new CompletableFuture<Boolean>();
         this.putCompletableFutures.put(this.requestID, t);
         this.ms.sendAsync(Util.getCoordinator(),
                 "put",
@@ -55,7 +55,7 @@ class Store implements common.Store {
 
     @Override
     public CompletableFuture<Map<Long, byte[]>> get(final Collection<Long> keys) {
-        final CompletableFuture<Map<Long, byte[]>> t = new CompletableFuture<>();
+        final var t = new CompletableFuture<Map<Long, byte[]>>();
         this.getCompletableFutures.put(this.requestID, t);
         this.ms.sendAsync(Util.getCoordinator(),
                 "get",

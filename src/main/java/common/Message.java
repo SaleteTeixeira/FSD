@@ -3,7 +3,7 @@ package common;
 public abstract class Message {
     private final int requestID;
 
-    Message(final int requestID) {
+    public Message(final int requestID) {
         this.requestID = requestID;
     }
 
