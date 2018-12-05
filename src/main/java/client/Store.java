@@ -43,7 +43,7 @@ class Store implements common.Store {
     }
 
     public CompletableFuture<Boolean> put(final Map<Long, byte[]> values) {
-        final var t = new CompletableFuture<Boolean>();
+        final CompletableFuture<Boolean> t = new CompletableFuture<>();
         this.putCompletableFutures.put(this.requestID, t);
         this.ms.sendAsync(Util.getCoordinator(),
                 "put",
@@ -52,7 +52,7 @@ class Store implements common.Store {
     }
 
     public CompletableFuture<Map<Long, byte[]>> get(final Collection<Long> keys) {
-        final var t = new CompletableFuture<Map<Long, byte[]>>();
+        final CompletableFuture<Map<Long, byte[]>> t = new CompletableFuture<Map<Long, byte[]>>();
         this.getCompletableFutures.put(this.requestID, t);
         this.ms.sendAsync(Util.getCoordinator(),
                 "get",
