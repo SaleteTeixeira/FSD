@@ -1,5 +1,6 @@
 package coordinator;
 
+import com.sun.org.apache.xpath.internal.operations.Bool;
 import common.*;
 import io.atomix.cluster.messaging.ManagedMessagingService;
 import io.atomix.cluster.messaging.impl.NettyMessagingService;
@@ -53,7 +54,7 @@ public class Store {
     }
 
     public CompletableFuture<Boolean> put(final int requestID, final Map<Long, byte[]> values) {
-        final var t = new CompletableFuture<Boolean>();
+        final CompletableFuture<Boolean> t = new CompletableFuture<>();
         this.transactionID.getAndIncrement();
         this.putCompletableFutures.put(this.transactionID, t);
 
@@ -70,7 +71,7 @@ public class Store {
     }
 
     public CompletableFuture<Map<Long, byte[]>> get(final int requestID, final Collection<Long> keys) {
-        final var t = new CompletableFuture<Map<Long, byte[]>>();
+        final CompletableFuture<Map<Long, byte[]>> t = new CompletableFuture<Map<Long, byte[]>>();
         this.transactionID.getAndIncrement();
         this.getCompletableFutures.put(this.transactionID, t);
 
