@@ -65,14 +65,14 @@ class Store implements common.Store {
     private void handlePut(final Address origin, final byte[] bytes) {
         if (origin.equals(Util.getCoordinator())) {
             final PutReply reply = this.s.decode(bytes);
-            this.putCompletableFutures.get(reply.getRequestID()).complete(reply.getValue());
+            this.putCompletableFutures.get(reply.getRequestID()).completedFuture(reply.getValue());
         }
     }
 
     private void handleGet(final Address origin, final byte[] bytes) {
         if (origin.equals(Util.getCoordinator())) {
             final GetReply reply = this.s.decode(bytes);
-            this.getCompletableFutures.get(reply.getRequestID()).complete(reply.getValues());
+            this.getCompletableFutures.get(reply.getRequestID()).completedFuture(reply.getValues());
         }
     }
 }

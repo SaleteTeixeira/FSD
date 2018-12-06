@@ -87,6 +87,8 @@ public class Store {
     }
 
     private void handlePut(final Address origin, final byte[] bytes) {
+        //MUDAR: espera todos
+
         boolean stop=false;
 
         for(int i=0; i<servers.length && !stop; i++){
@@ -94,15 +96,13 @@ public class Store {
                 stop=true;
 
                 final PutReply reply = this.s.decode(bytes);
-                this.putCompletableFutures.get(reply.getTransactionID()).complete(reply.getValue());
+                this.putCompletableFutures.get(reply.getTransactionID()).completedFuture(reply.getValue());
             }
         }
     }
 
     private void handleGet(final Address origin, final byte[] bytes) {
-
-        //DUVIDA: ele recebe várias respostas ao GET porque manda get para os servidores que tiverem as chaves
-        //mas a resposta é só um CompletableFuture<Map<Long, byte[]>>, não uma coleção deles
+        //MUDAR: espera todos
 
         boolean stop=false;
 
@@ -111,7 +111,7 @@ public class Store {
                 stop=true;
 
                 final GetReply reply = this.s.decode(bytes);
-                this.getCompletableFutures.get(reply.getTransactionID()).complete(reply.getValues());
+                this.getCompletableFutures.get(reply.getTransactionID()).completedFuture(reply.getValues());
             }
         }
     }

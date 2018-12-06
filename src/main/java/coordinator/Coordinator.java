@@ -23,33 +23,32 @@ public class Coordinator {
 
         ms.registerHandler("put", (o,m) -> {
             final PutRequest request = s.decode(m);
-            CompletableFuture<Boolean> r = store.put(request.getRequestID(), request.getValues());
 
-            //DUVIDA: pode ser assim? ou usar o thenCompose???
-            try {
+            //DUVIDA: não é necessário return para o put???
+            //Verificar que não prende
+
+            store.put(request.getRequestID(), request.getValues()).thenAccept((bool) -> {
                 ms.sendAsync(o,
                     "put",
-                    s.encode(new PutReply(request.getRequestID(), null, r.get()))
+                    s.encode(new PutReply(request.getRequestID(), null, bool))
                 );
-            } catch (InterruptedException | ExecutionException e) {
-                e.printStackTrace();
-            }
+            });
+
         }, es);
 
         ms.registerHandler("get", (o,m) -> {
             final GetRequest request = s.decode(m);
 
-            CompletableFuture<Map<Long, byte[]>> r = store.get(request.getRequestID(), request.getKeys());
+            //DUVIDA: não é necessário return para o get???
+            //Verificar que não prende
 
-            //DUVIDA: pode ser assim? ou usar o thenCompose???
-             try {
+            store.get(request.getRequestID(), request.getKeys()).thenAccept((map) -> {
                 ms.sendAsync(o,
                     "get",
-                    s.encode(new GetReply(request.getRequestID(), null, r.get()))
+                    s.encode(new GetReply(request.getRequestID(), null, map))
                 );
-             } catch (InterruptedException | ExecutionException e) {
-                 e.printStackTrace();
-             }
+            });
+
         }, es);
 
         try {

@@ -13,13 +13,17 @@ public class Client {
 
         final Store store = new Store(Integer.parseInt(args[0]));
         final Random random = new Random();
+
         for (int i = 0; i < numOps; i++) {
+
             final int op = random.nextInt(2);
             final int numKeys = random.nextInt(maxNumKeys + 1);
             final Collection<Long> keys = new ArrayList<>();
+
             for (int j = 0; j < numKeys; j++) {
                 keys.add((long) random.nextInt(keyUpperBound));
             }
+
             switch (op) {
                 case 0: // Get
                     try {
@@ -27,9 +31,11 @@ public class Client {
                     } catch (final InterruptedException | ExecutionException e) {
                         e.printStackTrace();
                     }
+
                     break;
                 case 1: // Put
                     final Map<Long, byte[]> values = new HashMap<>();
+
                     keys.forEach(k -> {
                         final byte[] temp = new byte[valueLength];
                         for (int j = 0; j < valueLength; j++) {
@@ -37,11 +43,13 @@ public class Client {
                         }
                         values.put(k, temp);
                     });
+
                     try {
                         System.out.println(store.put(values).get());
                     } catch (final InterruptedException | ExecutionException e) {
                         e.printStackTrace();
                     }
+
                     break;
                 default:
                     System.exit(1);
