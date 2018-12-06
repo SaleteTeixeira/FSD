@@ -7,12 +7,14 @@ public class Client {
     public static void main(final String[] args) {
         final int numOps = 100; // Total number of gets + puts
         final int maxNumKeys = 20; // Maximum number of keys in a single request
-        //final var keyUpperBound = Integer.MAX_VALUE; // Upper bound of a given key
+        //final int keyUpperBound = Integer.MAX_VALUE; // Upper bound of a given key
         final int keyUpperBound = 10; // Upper bound of a given key
         final int valueLength = 20; // Length of each byte[] in put request
 
         final Store store = new Store(Integer.parseInt(args[0]));
         final Random random = new Random();
+
+        final boolean blocking = Boolean.parseBoolean(System.getProperty("blocking"));
 
         for (int i = 0; i < numOps; i++) {
 
@@ -26,10 +28,14 @@ public class Client {
 
             switch (op) {
                 case 0: // Get
-                    try {
-                        System.out.println(store.get(keys).get());
-                    } catch (final InterruptedException | ExecutionException e) {
-                        e.printStackTrace();
+                    if (blocking) {
+                        try {
+                            System.out.println(store.get(keys).get());
+                        } catch (final InterruptedException | ExecutionException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        store.get(keys).thenAccept(System.out::println);
                     }
 
                     break;
@@ -44,10 +50,14 @@ public class Client {
                         values.put(k, temp);
                     });
 
-                    try {
-                        System.out.println(store.put(values).get());
-                    } catch (final InterruptedException | ExecutionException e) {
-                        e.printStackTrace();
+                    if (blocking) {
+                        try {
+                            System.out.println(store.put(values).get());
+                        } catch (final InterruptedException | ExecutionException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        store.put(values).thenAccept(System.out::println);
                     }
 
                     break;
