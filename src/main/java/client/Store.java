@@ -21,10 +21,10 @@ class Store implements common.Store {
     private final Map<Integer, CompletableFuture<Boolean>> putCompletableFutures;
     private final Map<Integer, CompletableFuture<Map<Long, byte[]>>> getCompletableFutures;
 
-    public Store(final int clientID) {
+    public Store() {
         this.s = Util.getSerializer();
         this.ms = NettyMessagingService.builder()
-                .withAddress(Address.from("localhost:" + (22220 + clientID)))
+                .withAddress(Address.from("localhost:" + Integer.getInteger("port", 22220)))
                 .build();
         final ExecutorService es = Executors.newSingleThreadExecutor();
 

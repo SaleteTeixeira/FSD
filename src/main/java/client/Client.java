@@ -11,10 +11,10 @@ public class Client {
         final int keyUpperBound = 10; // Upper bound of a given key
         final int valueLength = 20; // Length of each byte[] in put request
 
-        final Store store = new Store(Integer.parseInt(args[0]));
+        final Store store = new Store();
         final Random random = new Random();
 
-        final boolean blocking = Boolean.parseBoolean(System.getProperty("blocking"));
+        final boolean blocking = Boolean.getBoolean("blocking");
 
         for (int i = 0; i < numOps; i++) {
 
