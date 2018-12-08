@@ -1,11 +1,11 @@
 package client;
 
 import java.util.*;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 public class Client {
     public static void main(final String[] args) {
-        final int numOps = 100; // Total number of gets + puts
+        final int numOps = 10; // Total number of gets + puts
         final int maxNumKeys = 20; // Maximum number of keys in a single request
         //final int keyUpperBound = Integer.MAX_VALUE; // Upper bound of a given key
         final int keyUpperBound = 10; // Upper bound of a given key
@@ -13,8 +13,6 @@ public class Client {
 
         final Store store = new Store();
         final Random random = new Random();
-
-        final boolean blocking = Boolean.getBoolean("blocking");
 
         for (int i = 0; i < numOps; i++) {
 
@@ -28,15 +26,9 @@ public class Client {
 
             switch (op) {
                 case 0: // Get
-                    if (blocking) {
-                        try {
-                            System.out.println(store.get(keys).get());
-                        } catch (final InterruptedException | ExecutionException e) {
-                            e.printStackTrace();
-                        }
-                    } else {
-                        store.get(keys).thenAccept(System.out::println);
-                    }
+                    store.get(keys).thenAccept((map) -> {
+                        System.out.println("Resposta a um get: " +map.toString());
+                    });
 
                     break;
                 case 1: // Put
@@ -48,17 +40,13 @@ public class Client {
                             temp[j] = (byte) random.nextInt(Byte.MAX_VALUE + 1);
                         }
                         values.put(k, temp);
+
+                        System.out.println(k +" "+temp);
                     });
 
-                    if (blocking) {
-                        try {
-                            System.out.println(store.put(values).get());
-                        } catch (final InterruptedException | ExecutionException e) {
-                            e.printStackTrace();
-                        }
-                    } else {
-                        store.put(values).thenAccept(System.out::println);
-                    }
+                    store.put(values).thenAccept((bool) -> {
+                        System.out.println("Resposta a um put: " + bool);
+                    });
 
                     break;
                 default:
@@ -66,6 +54,13 @@ public class Client {
                     break;
             }
         }
+
+        try {
+            TimeUnit.MINUTES.sleep(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         System.exit(0);
     }
 }

@@ -3,10 +3,7 @@ package client;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 import common.*;
 import io.atomix.cluster.messaging.ManagedMessagingService;
@@ -46,33 +43,51 @@ class Store implements common.Store {
     public CompletableFuture<Boolean> put(final Map<Long, byte[]> values) {
         final CompletableFuture<Boolean> t = new CompletableFuture<>();
         this.putCompletableFutures.put(this.requestID, t);
+
+        try {
+            TimeUnit.SECONDS.sleep(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         this.ms.sendAsync(Util.getCoordinator(),
                 "put",
-                this.s.encode(new PutRequest(this.requestID++, null, values)));
+                this.s.encode(new PutRequest(this.requestID++, -1, values))
+        );
+
         return t;
     }
 
     @Override
     public CompletableFuture<Map<Long, byte[]>> get(final Collection<Long> keys) {
-        final CompletableFuture<Map<Long, byte[]>> t = new CompletableFuture<Map<Long, byte[]>>();
+        final CompletableFuture<Map<Long, byte[]>> t = new CompletableFuture<>();
         this.getCompletableFutures.put(this.requestID, t);
+
+        try {
+            TimeUnit.SECONDS.sleep(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         this.ms.sendAsync(Util.getCoordinator(),
                 "get",
-                this.s.encode(new GetRequest(this.requestID++, null, keys)));
+                this.s.encode(new GetRequest(this.requestID++, -1, keys))
+        );
+
         return t;
     }
 
     private void handlePut(final Address origin, final byte[] bytes) {
         if (origin.equals(Util.getCoordinator())) {
             final PutReply reply = this.s.decode(bytes);
-            this.putCompletableFutures.get(reply.getRequestID()).completedFuture(reply.getValue());
+            this.putCompletableFutures.get(reply.getRequestID()).complete(reply.getValue());
         }
     }
 
     private void handleGet(final Address origin, final byte[] bytes) {
         if (origin.equals(Util.getCoordinator())) {
             final GetReply reply = this.s.decode(bytes);
-            this.getCompletableFutures.get(reply.getRequestID()).completedFuture(reply.getValues());
+            this.getCompletableFutures.get(reply.getRequestID()).complete(reply.getValues());
         }
     }
 }

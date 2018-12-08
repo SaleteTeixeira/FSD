@@ -1,12 +1,11 @@
 package common;
 
 import java.util.Collection;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class GetRequest extends Message {
     private final Collection<Long> keys;
 
-    public GetRequest(final int requestID, final AtomicInteger transactionID, final Collection<Long> keys) {
+    public GetRequest(final int requestID, final int transactionID, final Collection<Long> keys) {
         super(requestID, transactionID);
         this.keys = keys;
     }
@@ -20,6 +19,6 @@ public class GetRequest extends Message {
         return super.toString() +
                 "GetRequest{" +
                 "keys=" + this.keys +
-                '}';
+                "}}";
     }
 }

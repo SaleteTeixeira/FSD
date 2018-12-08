@@ -1,14 +1,12 @@
 package common;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 public abstract class Message {
     private final int requestID;
     private final int transactionID;
 
-    public Message(final int requestID, final AtomicInteger transactionID) {
+    public Message(final int requestID, final int transactionID) {
         this.requestID = requestID;
-        this.transactionID = transactionID.intValue();
+        this.transactionID = transactionID;
     }
 
     public int getRequestID() {
@@ -22,8 +20,8 @@ public abstract class Message {
     @Override
     public String toString() {
         return "Message{" +
-                ", requestID=" + this.requestID +
+                "requestID=" + this.requestID +
                 ", transactionID=" + this.transactionID +
-                '}';
+                ", ";
     }
 }

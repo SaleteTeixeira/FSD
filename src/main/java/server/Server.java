@@ -12,56 +12,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class Server {
-
-    public static void main(String[] args){
-        final Serializer s = Util.getSerializer();
-        final ManagedMessagingService ms = NettyMessagingService.builder()
-                                                                .withAddress(Address.from(args[0]))
-                                                                .build();
-        final ExecutorService es = Executors.newSingleThreadExecutor();
-        final Map<Long, byte[]> data = new HashMap<>();
-        final Map<Long, Integer> clock = new HashMap<>();
-
-        ms.registerHandler("put", (o,m) -> {
-            final PutRequest request = s.decode(m);
-
-            for(Map.Entry<Long, byte[]> entry: request.getValues().entrySet()){
-                if(change_value(clock, entry.getKey(), request.getRequestID())){
-                    data.put(entry.getKey(), entry.getValue());
-                    clock.put(entry.getKey(), request.getRequestID());
-                }
-            }
-
-            AtomicInteger transactionID = null;
-            transactionID.set(request.getTransactionID());
-
-            ms.sendAsync(o,"put",
-                    s.encode(new PutReply(request.getRequestID(), transactionID, true))
-            );
-        }, es);
-
-        ms.registerHandler("get", (o,m) -> {
-            final GetRequest request = s.decode(m);
-
-            Map<Long, byte[]> result = insert(request.getKeys(), data);
-
-            AtomicInteger transactionID = null;
-            transactionID.set(request.getTransactionID());
-
-            ms.sendAsync(o,"get",
-                    s.encode(new GetReply(request.getRequestID(), transactionID, result))
-            );
-        }, es);
-
-        try {
-            ms.start().get();
-        } catch (final InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        }
-    }
 
     public static boolean change_value(Map<Long, Integer> clock, long key, int transactionID){
         if(clock.containsKey(key))
@@ -75,5 +27,47 @@ public class Server {
         keys.forEach(k -> {byte[] v = data.get(k); tmp.put(k,v);});
 
         return tmp;
+    }
+
+    public static void main(String[] args){
+        final Serializer s = Util.getSerializer();
+        final ManagedMessagingService ms = NettyMessagingService.builder()
+                                                                .withAddress(Address.from("localhost:"+args[0]))
+                                                                .build();
+        final ExecutorService es = Executors.newSingleThreadExecutor();
+
+        final Map<Long, byte[]> data = new HashMap<>();
+        final Map<Long, Integer> clock = new HashMap<>();
+
+        ms.registerHandler("put", (o,m) -> {
+            final PutRequest request = s.decode(m);
+
+            for(Map.Entry<Long, byte[]> entry: request.getValues().entrySet()){
+                if(change_value(clock, entry.getKey(), request.getTransactionID())){
+                    data.put(entry.getKey(), entry.getValue());
+                    clock.put(entry.getKey(), request.getTransactionID());
+                }
+            }
+
+            ms.sendAsync(o,"put",
+                    s.encode(new PutReply(request.getRequestID(), request.getTransactionID(), true))
+            );
+        }, es);
+
+        ms.registerHandler("get", (o,m) -> {
+            final GetRequest request = s.decode(m);
+
+            Map<Long, byte[]> result = insert(request.getKeys(), data);
+
+            ms.sendAsync(o,"get",
+                    s.encode(new GetReply(request.getRequestID(), request.getTransactionID(), result))
+            );
+        }, es);
+
+        try {
+            ms.start().get();
+        } catch (final InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
     }
 }
