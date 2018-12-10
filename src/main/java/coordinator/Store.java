@@ -6,48 +6,49 @@ import io.atomix.cluster.messaging.impl.NettyMessagingService;
 import io.atomix.utils.net.Address;
 import io.atomix.utils.serializer.Serializer;
 
-import java.security.Key;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class Store {
 
-    public class Contador{
+    public class Contador {
         private int nr_a_receber;
         private int nr_recebido;
         private boolean put_answers;
         private Map<Long, byte[]> get_answers;
 
-        Contador(int nr_a_r, int nr_r){
-            this.nr_a_receber = nr_a_r;
-            this.nr_recebido = nr_r;
+        Contador(int nr_a_receber) {
+            this.nr_a_receber = nr_a_receber;
+            this.nr_recebido = 0;
             this.put_answers = true;
             this.get_answers = new HashMap<>();
         }
 
-        public boolean finished(){
-            return this.nr_a_receber==this.nr_recebido;
+        public boolean finished() {
+            return this.nr_a_receber == this.nr_recebido;
         }
+
         public void increment_nr_recebido() {
             this.nr_recebido++;
         }
+
         public boolean getPut_answers() {
             return this.put_answers;
         }
+
         public void setPut_answers(boolean put_answers) {
             this.put_answers = put_answers;
         }
-        public Map<Long,byte[]> getGet_answers(){
+
+        public Map<Long, byte[]> getGet_answers() {
             return this.get_answers;
         }
+
         public void setGet_answers(Map<Long, byte[]> get_answers) {
-            for(Map.Entry<Long, byte[]> s : get_answers.entrySet()){
+            for (Map.Entry<Long, byte[]> s : get_answers.entrySet()) {
                 this.get_answers.put(s.getKey(), s.getValue());
             }
         }
@@ -95,16 +96,35 @@ public class Store {
         final CompletableFuture<Boolean> t = new CompletableFuture<>();
         this.transactionID++;
         this.putCompletableFutures.put(this.transactionID, t);
-        this.putCompletableFuturesCount.put(this.transactionID, new Contador(values.keySet().size(), 0));
 
-        for(Long key : values.keySet()) {
-            int serv_id = (int) (key % (servers.length));
-
-            ms.sendAsync(servers[serv_id],
-                    "put",
-                    s.encode(new PutRequest(requestID, this.transactionID, values))
-            );
+        final Map<Address, Map<Long, byte[]>> temp = new HashMap<>();
+        for (final Address server : this.servers) {
+            temp.put(server, new HashMap<>());
         }
+        values.forEach((k, v) -> {
+            final Address index = this.servers[(int) (k % (this.servers.length))];
+            temp.get(index).put(k, v);
+        });
+
+        int count = 0;
+        for (final Address address : temp.keySet()) {
+            if (temp.get(address).size() > 0) {
+                count++;
+            }
+        }
+
+        if (count == 0) {
+            t.complete(true);
+            return t;
+        }
+
+        this.putCompletableFuturesCount.put(this.transactionID, new Contador(count));
+
+        temp.forEach((k, v) -> {
+            if (v.size() > 0) {
+                this.ms.sendAsync(k, "put", this.s.encode(new PutRequest(requestID, this.transactionID, temp.get(k))));
+            }
+        });
 
         return t;
     }
@@ -113,25 +133,47 @@ public class Store {
         final CompletableFuture<Map<Long, byte[]>> t = new CompletableFuture<>();
         this.transactionID++;
         this.getCompletableFutures.put(this.transactionID, t);
-        this.getCompletableFuturesCount.put(this.transactionID, new Contador(keys.size(), 0));
+        this.getCompletableFuturesCount.put(this.transactionID, new Contador(keys.size()));
 
-        for(Long key : keys){
-            int serv_id = (int) (key%(servers.length));
-
-            ms.sendAsync(servers[serv_id],
-                    "get",
-                    s.encode(new GetRequest(requestID, this.transactionID, keys))
-            );
+        final Map<Address, Collection<Long>> temp = new HashMap<>();
+        for (final Address server : this.servers) {
+            temp.put(server, new ArrayList<>());
         }
+
+        keys.forEach(k -> {
+            final Address index = this.servers[(int) (k % (this.servers.length))];
+            temp.get(index).add(k);
+        });
+
+        int count = 0;
+        for (final Address address : temp.keySet()) {
+            if (temp.get(address).size() > 0) {
+                count++;
+            }
+        }
+
+        if (count == 0) {
+            t.complete(new HashMap<>());
+            return t;
+        }
+
+        this.getCompletableFuturesCount.put(this.transactionID, new Contador(count));
+
+        temp.forEach((k, v) -> {
+            if (v.size() > 0) {
+                this.ms.sendAsync(k, "get", this.s.encode(new GetRequest(requestID, this.transactionID, temp.get(k))));
+            }
+        });
+
         return t;
     }
 
     private void handlePut(final Address origin, final byte[] bytes) {
-        boolean stop=false;
+        boolean stop = false;
 
-        for(int i=0; i<servers.length && !stop; i++){
-            if(origin.equals(servers[i])) {
-                stop=true;
+        for (int i = 0; i < servers.length && !stop; i++) {
+            if (origin.equals(servers[i])) {
+                stop = true;
 
                 final PutReply reply = this.s.decode(bytes);
 
@@ -139,7 +181,7 @@ public class Store {
                 c.increment_nr_recebido();
                 c.setPut_answers(reply.getValue());
 
-                if(c.finished()){
+                if (c.finished()) {
                     this.putCompletableFutures.get(reply.getTransactionID()).complete(c.getPut_answers());
                 }
             }
@@ -147,11 +189,11 @@ public class Store {
     }
 
     private void handleGet(final Address origin, final byte[] bytes) {
-        boolean stop=false;
+        boolean stop = false;
 
-        for(int i=0; i<servers.length && !stop; i++){
-            if(origin.equals(servers[i])) {
-                stop=true;
+        for (int i = 0; i < servers.length && !stop; i++) {
+            if (origin.equals(servers[i])) {
+                stop = true;
 
                 final GetReply reply = this.s.decode(bytes);
 
@@ -159,7 +201,7 @@ public class Store {
                 c.increment_nr_recebido();
                 c.setGet_answers(reply.getValues());
 
-                if(c.finished()) {
+                if (c.finished()) {
                     this.getCompletableFutures.get(reply.getTransactionID()).complete(c.getGet_answers());
                 }
             }

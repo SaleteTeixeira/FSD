@@ -30,13 +30,13 @@ public class Client {
 
             switch (op) {
                 case 0: // Get
+                    System.out.print("A enviar um get: ");
+                    keys.forEach(k -> {
+                        System.out.print(k);
+                        System.out.print(' ');
+                    });
+                    System.out.println();
                     if (blocking) {
-                        System.out.print("A enviar um get: ");
-                        keys.forEach(k -> {
-                            System.out.print(k);
-                            System.out.print(' ');
-                        });
-                        System.out.println();
                         try {
                             final Map<Long, byte[]> response = store.get(keys).get();
                             System.out.print("Resposta a um get: ");
