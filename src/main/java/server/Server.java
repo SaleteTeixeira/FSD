@@ -26,11 +26,7 @@ public class Server {
             final PutRequest request = s.decode(m);
             store.put(request.getValues(), request.getTransactionID());
 
-            System.out.print("Recebi um put: ");
-            request.getValues().forEach((k, v) -> {
-                System.out.print(k + "=" + (new String(v)) + ' ');
-            });
-            System.out.println();
+            System.out.println(request.toString());
 
             ms.sendAsync(o, "put", s.encode(new PutReply(request.getRequestID(), request.getTransactionID(), true)));
         }, es);
@@ -38,23 +34,11 @@ public class Server {
         ms.registerHandler("get", (o, m) -> {
             final GetRequest request = s.decode(m);
 
-            System.out.print("Recebi um get: ");
-            request.getKeys().forEach(k -> {
-                System.out.print(k + " ");
-            });
-            System.out.println();
+            System.out.println(request.toString());
 
             final Map<Long, byte[]> result = store.get(request.getKeys());
 
-            System.out.print("Vou responder: ");
-            result.forEach((k, v) -> {
-                if (v != null) {
-                    System.out.print(k + "=" + (new String(v)) + ' ');
-                } else {
-                    System.out.print(k + "=null ");
-                }
-            });
-            System.out.println();
+            System.out.println("Vou responder: " + Util.valuesToString(result));
 
             ms.sendAsync(o, "get", s.encode(new GetReply(request.getRequestID(), request.getTransactionID(), result)));
         }, es);

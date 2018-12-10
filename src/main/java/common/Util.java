@@ -24,7 +24,10 @@ public class Util {
 
         for (final Map.Entry<Long, byte[]> a : values.entrySet()) {
             s.append(a.getKey());
-            final String b = new String(a.getValue());
+            String b = "null";
+            if (a.getValue() != null) {
+                b = new String(a.getValue());
+            }
             s.append(" ").append(b).append(", ");
         }
 
