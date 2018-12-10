@@ -15,6 +15,9 @@ public class Client {
         final Store store = new Store();
         final Random random = new Random();
 
+        final boolean blocking = Boolean.parseBoolean(System.getProperty("blocking"));
+        final String charSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
         for (int i = 0; i < numOps; i++) {
 
             final int op = random.nextInt(2);
@@ -25,19 +28,34 @@ public class Client {
                 keys.add((long) random.nextInt(keyUpperBound));
             }
 
-            final boolean blocking = Boolean.parseBoolean(System.getProperty("blocking"));
-
             switch (op) {
                 case 0: // Get
                     if (blocking) {
+                        System.out.print("A enviar um get: ");
+                        keys.forEach(k -> {
+                            System.out.print(k);
+                            System.out.print(' ');
+                        });
+                        System.out.println();
                         try {
-                            System.out.println("Resposta a um get: "+store.get(keys).get());
+                            final Map<Long, byte[]> response = store.get(keys).get();
+                            System.out.print("Resposta a um get: ");
+                            response.forEach((k, v) -> {
+                                System.out.print(k);
+                                if (v != null) {
+                                    System.out.print("=" + new String(v));
+                                } else {
+                                    System.out.print("=null");
+                                }
+                                System.out.print(' ');
+                            });
+                            System.out.println();
                         } catch (final InterruptedException | ExecutionException e) {
                             e.printStackTrace();
                         }
                     } else {
                         store.get(keys).thenAccept((map) -> {
-                            System.out.println("Resposta a um get: " +map.toString());
+                            System.out.println("Resposta a um get: " + map.toString());
                         });
                     }
                     break;
@@ -45,18 +63,24 @@ public class Client {
                     final Map<Long, byte[]> values = new HashMap<>();
 
                     keys.forEach(k -> {
-                        final byte[] temp = new byte[valueLength];
+                        final StringBuilder stringBuilder = new StringBuilder(valueLength);
                         for (int j = 0; j < valueLength; j++) {
-                            temp[j] = (byte) random.nextInt(Byte.MAX_VALUE + 1);
+                            stringBuilder.append(charSet.charAt(random.nextInt(charSet.length())));
                         }
-                        values.put(k, temp);
 
-                        System.out.println(k +" "+temp);
+                        values.put(k, stringBuilder.toString().getBytes());
                     });
+
+                    System.out.print("A enviar um put: ");
+                    values.forEach((k, v) -> {
+                        System.out.print(k);
+                        System.out.print('=' + new String(v) + ' ');
+                    });
+                    System.out.println();
 
                     if (blocking) {
                         try {
-                            System.out.println("Resposta a um put: "+store.put(values).get());
+                            System.out.println("Resposta a um put: " + store.put(values).get());
                         } catch (final InterruptedException | ExecutionException e) {
                             e.printStackTrace();
                         }
