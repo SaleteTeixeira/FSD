@@ -22,7 +22,6 @@ public class Coordinator {
         ms.registerHandler("put", (o,m) -> {
             final PutRequest request = s.decode(m);
 
-            //TESTAR
             System.out.println(request.toString());
 
             store.put(request.getRequestID(), request.getValues()).thenAccept((bool) -> {
@@ -36,7 +35,6 @@ public class Coordinator {
         ms.registerHandler("get", (o,m) -> {
             final GetRequest request = s.decode(m);
 
-            //TESTAR
             System.out.println(request.toString());
 
             store.get(request.getRequestID(), request.getKeys()).thenAccept((map) -> {

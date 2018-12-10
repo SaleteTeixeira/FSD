@@ -12,9 +12,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class Store {
+class Store {
 
-    public class Contador {
+    private class Contador {
         private final int nr_a_receber;
         private int nr_recebido;
         private boolean put_answers;
@@ -27,27 +27,27 @@ public class Store {
             this.get_answers = new HashMap<>();
         }
 
-        public boolean finished() {
+        boolean finished() {
             return this.nr_a_receber == this.nr_recebido;
         }
 
-        public void increment_nr_recebido() {
+        void increment_nr_recebido() {
             this.nr_recebido++;
         }
 
-        public boolean getPut_answers() {
+        boolean getPut_answers() {
             return this.put_answers;
         }
 
-        public void setPut_answers(final boolean put_answers) {
+        void setPut_answers(final boolean put_answers) {
             this.put_answers = put_answers;
         }
 
-        public Map<Long, byte[]> getGet_answers() {
+        Map<Long, byte[]> getGet_answers() {
             return this.get_answers;
         }
 
-        public void setGet_answers(final Map<Long, byte[]> get_answers) {
+        void setGet_answers(final Map<Long, byte[]> get_answers) {
             for (final Map.Entry<Long, byte[]> s : get_answers.entrySet()) {
                 this.get_answers.put(s.getKey(), s.getValue());
             }
@@ -56,7 +56,6 @@ public class Store {
 
     private final Serializer s;
     private final ManagedMessagingService ms;
-    private final ExecutorService es;
     private final Address[] servers;
 
     private final Map<Integer, CompletableFuture<Boolean>> putCompletableFutures;
@@ -66,15 +65,15 @@ public class Store {
 
     private int transactionID;
 
-    public Store() {
+    Store() {
         this.s = Util.getSerializer();
         this.ms = NettyMessagingService.builder()
                 .withAddress(Address.from("localhost:22222"))
                 .build();
-        this.es = Executors.newSingleThreadExecutor();
 
-        this.ms.registerHandler("put", this::handlePut, this.es);
-        this.ms.registerHandler("get", this::handleGet, this.es);
+        final ExecutorService es = Executors.newSingleThreadExecutor();
+        this.ms.registerHandler("put", this::handlePut, es);
+        this.ms.registerHandler("get", this::handleGet, es);
 
         this.servers = new Address[]{Address.from("localhost:12345"), Address.from("localhost:12346"), Address.from("localhost:12347")};
         this.transactionID = -1;
@@ -92,33 +91,27 @@ public class Store {
         }
     }
 
-    public CompletableFuture<Boolean> put(final int requestID, final Map<Long, byte[]> values) {
+    CompletableFuture<Boolean> put(final int requestID, final Map<Long, byte[]> values) {
         final CompletableFuture<Boolean> t = new CompletableFuture<>();
         this.transactionID++;
         this.putCompletableFutures.put(this.transactionID, t);
 
         final Map<Address, Map<Long, byte[]>> temp = new HashMap<>();
-        for (final Address server : this.servers) {
-            temp.put(server, new HashMap<>());
-        }
+
         values.forEach((k, v) -> {
-            final Address index = this.servers[(int) (k % (this.servers.length))];
-            temp.get(index).put(k, v);
+            final Address key = this.servers[(int) (k % (this.servers.length))];
+            if (!temp.containsKey(key)) {
+                temp.put(key, new HashMap<>());
+            }
+            temp.get(key).put(k, v);
         });
 
-        int count = 0;
-        for (final Address address : temp.keySet()) {
-            if (temp.get(address).size() > 0) {
-                count++;
-            }
-        }
-
-        if (count == 0) {
+        if (temp.size() == 0) {
             t.complete(true);
             return t;
         }
 
-        this.putCompletableFuturesCount.put(this.transactionID, new Contador(count));
+        this.putCompletableFuturesCount.put(this.transactionID, new Contador(temp.size()));
 
         temp.forEach((k, v) -> {
             if (v.size() > 0) {
@@ -135,28 +128,21 @@ public class Store {
         this.getCompletableFutures.put(this.transactionID, t);
 
         final Map<Address, Collection<Long>> temp = new HashMap<>();
-        for (final Address server : this.servers) {
-            temp.put(server, new ArrayList<>());
-        }
 
         keys.forEach(k -> {
-            final Address index = this.servers[(int) (k % (this.servers.length))];
-            temp.get(index).add(k);
+            final Address key = this.servers[(int) (k % (this.servers.length))];
+            if (!temp.containsKey(key)) {
+                temp.put(key, new HashSet<>());
+            }
+            temp.get(key).add(k);
         });
 
-        int count = 0;
-        for (final Address address : temp.keySet()) {
-            if (temp.get(address).size() > 0) {
-                count++;
-            }
-        }
-
-        if (count == 0) {
+        if (temp.size() == 0) {
             t.complete(new HashMap<>());
             return t;
         }
 
-        this.getCompletableFuturesCount.put(this.transactionID, new Contador(count));
+        this.getCompletableFuturesCount.put(this.transactionID, new Contador(temp.size()));
 
         temp.forEach((k, v) -> {
             if (v.size() > 0) {
