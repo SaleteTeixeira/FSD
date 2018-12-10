@@ -133,7 +133,6 @@ public class Store {
         final CompletableFuture<Map<Long, byte[]>> t = new CompletableFuture<>();
         this.transactionID++;
         this.getCompletableFutures.put(this.transactionID, t);
-        this.getCompletableFuturesCount.put(this.transactionID, new Contador(keys.size()));
 
         final Map<Address, Collection<Long>> temp = new HashMap<>();
         for (final Address server : this.servers) {

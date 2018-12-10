@@ -5,6 +5,57 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 public class Client {
+    private final static Random random = new Random();
+    private final static String charSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+    private static Collection<Long> genKeys(final int numKeys, final int upperBound) {
+        final Collection<Long> keys = new ArrayList<>();
+        for (int j = 0; j < numKeys; j++) {
+            keys.add((long) random.nextInt(upperBound));
+        }
+        return keys;
+    }
+
+    private static byte[] genBytes(final int length) {
+        final StringBuilder stringBuilder = new StringBuilder(length);
+        for (int j = 0; j < length; j++) {
+            stringBuilder.append(charSet.charAt(random.nextInt(charSet.length())));
+        }
+        return stringBuilder.toString().getBytes();
+    }
+
+    private static void printGetResponse(final Map<Long, byte[]> values) {
+        System.out.print("Resposta a um get: ");
+        values.forEach((k, v) -> {
+            System.out.print(k);
+            if (v != null) {
+                System.out.print("=" + new String(v));
+            } else {
+                System.out.print("=null");
+            }
+            System.out.print(' ');
+        });
+        System.out.println();
+    }
+
+    private static void printGetRequest(final Collection<Long> keys) {
+        System.out.print("A enviar um get: ");
+        keys.forEach(k -> {
+            System.out.print(k);
+            System.out.print(' ');
+        });
+        System.out.println();
+    }
+
+    private static void printPutRequest(final Map<Long, byte[]> values) {
+        System.out.print("A enviar um put: ");
+        values.forEach((k, v) -> {
+            System.out.print(k);
+            System.out.print('=' + new String(v) + ' ');
+        });
+        System.out.println();
+    }
+
     public static void main(final String[] args) {
         final int numOps = 10; // Total number of gets + puts
         final int maxNumKeys = 20; // Maximum number of keys in a single request
@@ -15,70 +66,33 @@ public class Client {
         final Store store = new Store();
         final Random random = new Random();
 
-        final boolean blocking = Boolean.parseBoolean(System.getProperty("blocking"));
-        final String charSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-
         for (int i = 0; i < numOps; i++) {
 
             final int op = random.nextInt(2);
             final int numKeys = random.nextInt(maxNumKeys + 1);
-            final Collection<Long> keys = new ArrayList<>();
-
-            for (int j = 0; j < numKeys; j++) {
-                keys.add((long) random.nextInt(keyUpperBound));
-            }
+            final Collection<Long> keys = genKeys(maxNumKeys, keyUpperBound);
 
             switch (op) {
                 case 0: // Get
-                    System.out.print("A enviar um get: ");
-                    keys.forEach(k -> {
-                        System.out.print(k);
-                        System.out.print(' ');
-                    });
-                    System.out.println();
-                    if (blocking) {
+                    printGetRequest(keys);
+                    if (Boolean.parseBoolean(System.getProperty("blocking"))) {
                         try {
-                            final Map<Long, byte[]> response = store.get(keys).get();
-                            System.out.print("Resposta a um get: ");
-                            response.forEach((k, v) -> {
-                                System.out.print(k);
-                                if (v != null) {
-                                    System.out.print("=" + new String(v));
-                                } else {
-                                    System.out.print("=null");
-                                }
-                                System.out.print(' ');
-                            });
-                            System.out.println();
+                            printGetResponse(store.get(keys).get());
                         } catch (final InterruptedException | ExecutionException e) {
                             e.printStackTrace();
                         }
                     } else {
-                        store.get(keys).thenAccept((map) -> {
-                            System.out.println("Resposta a um get: " + map.toString());
-                        });
+                        store.get(keys).thenAccept(Client::printGetResponse);
                     }
                     break;
                 case 1: // Put
                     final Map<Long, byte[]> values = new HashMap<>();
 
-                    keys.forEach(k -> {
-                        final StringBuilder stringBuilder = new StringBuilder(valueLength);
-                        for (int j = 0; j < valueLength; j++) {
-                            stringBuilder.append(charSet.charAt(random.nextInt(charSet.length())));
-                        }
+                    keys.forEach(k -> values.put(k, genBytes(valueLength)));
 
-                        values.put(k, stringBuilder.toString().getBytes());
-                    });
+                    printPutRequest(values);
 
-                    System.out.print("A enviar um put: ");
-                    values.forEach((k, v) -> {
-                        System.out.print(k);
-                        System.out.print('=' + new String(v) + ' ');
-                    });
-                    System.out.println();
-
-                    if (blocking) {
+                    if (Boolean.parseBoolean(System.getProperty("blocking"))) {
                         try {
                             System.out.println("Resposta a um put: " + store.put(values).get());
                         } catch (final InterruptedException | ExecutionException e) {
@@ -91,17 +105,10 @@ public class Client {
                     }
                     break;
                 default:
+                    System.out.println("Ups");
                     System.exit(1);
                     break;
             }
         }
-
-        try {
-            TimeUnit.MINUTES.sleep(1);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        System.exit(0);
     }
 }
