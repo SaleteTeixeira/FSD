@@ -12,13 +12,14 @@ import io.atomix.utils.net.Address;
 import io.atomix.utils.serializer.Serializer;
 
 class Store implements common.Store {
-    private int requestID = 0;
     private final Serializer s;
     private final ManagedMessagingService ms;
+
+    private int requestID = 0;
     private final Map<Integer, CompletableFuture<Boolean>> putCompletableFutures;
     private final Map<Integer, CompletableFuture<Map<Long, byte[]>>> getCompletableFutures;
 
-    public Store() {
+    Store() {
         this.s = Util.getSerializer();
         this.ms = NettyMessagingService.builder()
                 .withAddress(Address.from("localhost:" + Integer.getInteger("port", 22220)))
@@ -39,16 +40,24 @@ class Store implements common.Store {
         this.getCompletableFutures = new HashMap<>();
     }
 
+    private void handlePut(final Address origin, final byte[] bytes) {
+        if (origin.equals(Util.getCoordinator())) {
+            final PutReply reply = this.s.decode(bytes);
+            this.putCompletableFutures.get(reply.getRequestID()).complete(reply.getValue());
+        }
+    }
+
+    private void handleGet(final Address origin, final byte[] bytes) {
+        if (origin.equals(Util.getCoordinator())) {
+            final GetReply reply = this.s.decode(bytes);
+            this.getCompletableFutures.get(reply.getRequestID()).complete(reply.getValues());
+        }
+    }
+
     @Override
     public CompletableFuture<Boolean> put(final Map<Long, byte[]> values) {
         final CompletableFuture<Boolean> t = new CompletableFuture<>();
         this.putCompletableFutures.put(this.requestID, t);
-
-        /*try {
-            TimeUnit.SECONDS.sleep(1);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }*/
 
         this.ms.sendAsync(Util.getCoordinator(),
                 "put",
@@ -63,31 +72,11 @@ class Store implements common.Store {
         final CompletableFuture<Map<Long, byte[]>> t = new CompletableFuture<>();
         this.getCompletableFutures.put(this.requestID, t);
 
-        /*try {
-            TimeUnit.SECONDS.sleep(1);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }*/
-
         this.ms.sendAsync(Util.getCoordinator(),
                 "get",
                 this.s.encode(new GetRequest(this.requestID++, -1, keys))
         );
 
         return t;
-    }
-
-    private void handlePut(final Address origin, final byte[] bytes) {
-        if (origin.equals(Util.getCoordinator())) {
-            final PutReply reply = this.s.decode(bytes);
-            this.putCompletableFutures.get(reply.getRequestID()).complete(reply.getValue());
-        }
-    }
-
-    private void handleGet(final Address origin, final byte[] bytes) {
-        if (origin.equals(Util.getCoordinator())) {
-            final GetReply reply = this.s.decode(bytes);
-            this.getCompletableFutures.get(reply.getRequestID()).complete(reply.getValues());
-        }
     }
 }

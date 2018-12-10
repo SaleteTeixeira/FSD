@@ -67,14 +67,14 @@ public class Client {
         final Random random = new Random();
 
         for (int i = 0; i < numOps; i++) {
-
             final int op = random.nextInt(2);
             final int numKeys = random.nextInt(maxNumKeys + 1);
-            final Collection<Long> keys = genKeys(maxNumKeys, keyUpperBound);
+            final Collection<Long> keys = genKeys(numKeys, keyUpperBound);
 
             switch (op) {
                 case 0: // Get
                     printGetRequest(keys);
+
                     if (Boolean.parseBoolean(System.getProperty("blocking"))) {
                         try {
                             printGetResponse(store.get(keys).get());
@@ -85,9 +85,9 @@ public class Client {
                         store.get(keys).thenAccept(Client::printGetResponse);
                     }
                     break;
+
                 case 1: // Put
                     final Map<Long, byte[]> values = new HashMap<>();
-
                     keys.forEach(k -> values.put(k, genBytes(valueLength)));
 
                     printPutRequest(values);
@@ -104,6 +104,7 @@ public class Client {
                         });
                     }
                     break;
+
                 default:
                     System.out.println("Ups");
                     System.exit(1);
