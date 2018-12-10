@@ -64,6 +64,8 @@ class Store {
     private final Map<Integer, Contador> getCompletableFuturesCount;
 
     private int transactionID;
+    private final Map<Integer, Collection<Address>> participants;
+    private final TwoPhaseCommit tpc;
 
     Store() {
         this.s = Util.getSerializer();
@@ -89,6 +91,9 @@ class Store {
             e.printStackTrace();
             System.exit(1);
         }
+
+        this.participants = new HashMap<>();
+        this.tpc = new TwoPhaseCommit();
     }
 
     CompletableFuture<Boolean> put(final int requestID, final Map<Long, byte[]> values) {
@@ -110,6 +115,8 @@ class Store {
             t.complete(true);
             return t;
         }
+
+        this.participants.put(this.transactionID, new HashSet<>(temp.keySet()));
 
         this.putCompletableFuturesCount.put(this.transactionID, new Contador(temp.size()));
 
@@ -167,7 +174,10 @@ class Store {
                 c.setPut_answers(reply.getValue());
 
                 if (c.finished()) {
-                    this.putCompletableFutures.get(reply.getTransactionID()).complete(c.getPut_answers());
+                    this.tpc.start(reply.getTransactionID(),this.participants.get(reply.getTransactionID())).thenAccept(b -> {
+                        this.putCompletableFutures.get(reply.getTransactionID()).complete(b);
+                    });
+                    //this.putCompletableFutures.get(reply.getTransactionID()).complete(c.getPut_answers());
                 }
             }
         }
