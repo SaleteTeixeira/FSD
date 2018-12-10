@@ -19,7 +19,7 @@ public class Util {
                 .build();
     }
 
-    static String valuesToString(final Map<Long, byte[]> values) {
+    public static String valuesToString(final Map<Long, byte[]> values) {
         final StringBuilder s = new StringBuilder();
 
         for (final Map.Entry<Long, byte[]> a : values.entrySet()) {

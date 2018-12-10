@@ -15,12 +15,12 @@ import java.util.concurrent.Executors;
 public class Store {
 
     public class Contador {
-        private int nr_a_receber;
+        private final int nr_a_receber;
         private int nr_recebido;
         private boolean put_answers;
-        private Map<Long, byte[]> get_answers;
+        private final Map<Long, byte[]> get_answers;
 
-        Contador(int nr_a_receber) {
+        Contador(final int nr_a_receber) {
             this.nr_a_receber = nr_a_receber;
             this.nr_recebido = 0;
             this.put_answers = true;
@@ -39,7 +39,7 @@ public class Store {
             return this.put_answers;
         }
 
-        public void setPut_answers(boolean put_answers) {
+        public void setPut_answers(final boolean put_answers) {
             this.put_answers = put_answers;
         }
 
@@ -47,8 +47,8 @@ public class Store {
             return this.get_answers;
         }
 
-        public void setGet_answers(Map<Long, byte[]> get_answers) {
-            for (Map.Entry<Long, byte[]> s : get_answers.entrySet()) {
+        public void setGet_answers(final Map<Long, byte[]> get_answers) {
+            for (final Map.Entry<Long, byte[]> s : get_answers.entrySet()) {
                 this.get_answers.put(s.getKey(), s.getValue());
             }
         }
@@ -57,7 +57,7 @@ public class Store {
     private final Serializer s;
     private final ManagedMessagingService ms;
     private final ExecutorService es;
-    private Address[] servers;
+    private final Address[] servers;
 
     private final Map<Integer, CompletableFuture<Boolean>> putCompletableFutures;
     private final Map<Integer, CompletableFuture<Map<Long, byte[]>>> getCompletableFutures;
@@ -73,8 +73,8 @@ public class Store {
                 .build();
         this.es = Executors.newSingleThreadExecutor();
 
-        this.ms.registerHandler("put", this::handlePut, es);
-        this.ms.registerHandler("get", this::handleGet, es);
+        this.ms.registerHandler("put", this::handlePut, this.es);
+        this.ms.registerHandler("get", this::handleGet, this.es);
 
         this.servers = new Address[]{Address.from("localhost:12345"), Address.from("localhost:12346"), Address.from("localhost:12347")};
         this.transactionID = -1;
@@ -129,7 +129,7 @@ public class Store {
         return t;
     }
 
-    public CompletableFuture<Map<Long, byte[]>> get(final int requestID, final Collection<Long> keys) {
+    CompletableFuture<Map<Long, byte[]>> get(final int requestID, final Collection<Long> keys) {
         final CompletableFuture<Map<Long, byte[]>> t = new CompletableFuture<>();
         this.transactionID++;
         this.getCompletableFutures.put(this.transactionID, t);
@@ -170,13 +170,13 @@ public class Store {
     private void handlePut(final Address origin, final byte[] bytes) {
         boolean stop = false;
 
-        for (int i = 0; i < servers.length && !stop; i++) {
-            if (origin.equals(servers[i])) {
+        for (int i = 0; i < this.servers.length && !stop; i++) {
+            if (origin.equals(this.servers[i])) {
                 stop = true;
 
                 final PutReply reply = this.s.decode(bytes);
 
-                Contador c = this.putCompletableFuturesCount.get(reply.getTransactionID());
+                final Contador c = this.putCompletableFuturesCount.get(reply.getTransactionID());
                 c.increment_nr_recebido();
                 c.setPut_answers(reply.getValue());
 
@@ -190,13 +190,13 @@ public class Store {
     private void handleGet(final Address origin, final byte[] bytes) {
         boolean stop = false;
 
-        for (int i = 0; i < servers.length && !stop; i++) {
-            if (origin.equals(servers[i])) {
+        for (int i = 0; i < this.servers.length && !stop; i++) {
+            if (origin.equals(this.servers[i])) {
                 stop = true;
 
                 final GetReply reply = this.s.decode(bytes);
 
-                Contador c = this.getCompletableFuturesCount.get(reply.getTransactionID());
+                final Contador c = this.getCompletableFuturesCount.get(reply.getTransactionID());
                 c.increment_nr_recebido();
                 c.setGet_answers(reply.getValues());
 
