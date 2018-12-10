@@ -18,7 +18,19 @@ public class GetReply extends Message {
     public String toString() {
         return super.toString() +
                 "GetReply{" +
-                "keys=" + this.values +
+                "values = " + print(this.values) +
                 "}}";
+    }
+
+    private String print(Map<Long, byte[]> values){
+        StringBuilder s = new StringBuilder();
+
+        for (Map.Entry<Long, byte[]> a : values.entrySet()){
+            s.append(a.getKey());
+            String b = new String(a.getValue());
+            s.append(" ").append(b).append(", ");
+        }
+
+        return s.toString();
     }
 }

@@ -1,6 +1,7 @@
 package client;
 
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 public class Client {
@@ -24,12 +25,21 @@ public class Client {
                 keys.add((long) random.nextInt(keyUpperBound));
             }
 
+            final boolean blocking = Boolean.parseBoolean(System.getProperty("blocking"));
+
             switch (op) {
                 case 0: // Get
-                    store.get(keys).thenAccept((map) -> {
-                        System.out.println("Resposta a um get: " +map.toString());
-                    });
-
+                    if (blocking) {
+                        try {
+                            System.out.println("Resposta a um get: "+store.get(keys).get());
+                        } catch (final InterruptedException | ExecutionException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        store.get(keys).thenAccept((map) -> {
+                            System.out.println("Resposta a um get: " +map.toString());
+                        });
+                    }
                     break;
                 case 1: // Put
                     final Map<Long, byte[]> values = new HashMap<>();
@@ -44,10 +54,17 @@ public class Client {
                         System.out.println(k +" "+temp);
                     });
 
-                    store.put(values).thenAccept((bool) -> {
-                        System.out.println("Resposta a um put: " + bool);
-                    });
-
+                    if (blocking) {
+                        try {
+                            System.out.println("Resposta a um put: "+store.put(values).get());
+                        } catch (final InterruptedException | ExecutionException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        store.put(values).thenAccept((bool) -> {
+                            System.out.println("Resposta a um put: " + bool);
+                        });
+                    }
                     break;
                 default:
                     System.exit(1);

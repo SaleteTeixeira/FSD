@@ -18,7 +18,7 @@ public class GetRequest extends Message {
     public String toString() {
         return super.toString() +
                 "GetRequest{" +
-                "keys=" + this.keys +
+                "keys=" + this.keys.toString() +
                 "}}";
     }
 }

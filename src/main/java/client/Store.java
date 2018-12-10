@@ -44,11 +44,11 @@ class Store implements common.Store {
         final CompletableFuture<Boolean> t = new CompletableFuture<>();
         this.putCompletableFutures.put(this.requestID, t);
 
-        try {
+        /*try {
             TimeUnit.SECONDS.sleep(1);
         } catch (InterruptedException e) {
             e.printStackTrace();
-        }
+        }*/
 
         this.ms.sendAsync(Util.getCoordinator(),
                 "put",
@@ -63,11 +63,11 @@ class Store implements common.Store {
         final CompletableFuture<Map<Long, byte[]>> t = new CompletableFuture<>();
         this.getCompletableFutures.put(this.requestID, t);
 
-        try {
+        /*try {
             TimeUnit.SECONDS.sleep(1);
         } catch (InterruptedException e) {
             e.printStackTrace();
-        }
+        }*/
 
         this.ms.sendAsync(Util.getCoordinator(),
                 "get",

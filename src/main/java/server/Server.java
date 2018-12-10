@@ -15,14 +15,14 @@ import java.util.concurrent.Executors;
 
 public class Server {
 
-    public static boolean change_value(Map<Long, Integer> clock, long key, int transactionID){
+    private static boolean change_value(Map<Long, Integer> clock, long key, int transactionID){
         if(clock.containsKey(key))
             if(clock.get(key) >= transactionID) return false;
 
         return true;
     }
 
-    public static Map<Long, byte[]> insert(Collection<Long> keys, Map<Long, byte[]> data){
+    private static Map<Long, byte[]> insert(Collection<Long> keys, Map<Long, byte[]> data){
         Map<Long, byte[]> tmp = new HashMap<>();
         keys.forEach(k -> {byte[] v = data.get(k); tmp.put(k,v);});
 
