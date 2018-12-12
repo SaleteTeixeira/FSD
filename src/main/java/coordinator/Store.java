@@ -84,6 +84,7 @@ class Store {
         this.getCompletableFutures = new HashMap<>();
         this.putCompletableFuturesCount = new HashMap<>();
         this.getCompletableFuturesCount = new HashMap<>();
+        this.tpc = new TwoPhaseCommit(this.s, this.ms, es);
 
         try {
             this.ms.start().get();
@@ -93,7 +94,6 @@ class Store {
         }
 
         this.participants = new HashMap<>();
-        this.tpc = new TwoPhaseCommit();
     }
 
     CompletableFuture<Boolean> put(final int requestID, final Map<Long, byte[]> values) {
