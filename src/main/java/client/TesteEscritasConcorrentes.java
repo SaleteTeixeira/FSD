@@ -16,7 +16,7 @@ import java.util.concurrent.Executors;
 public class TesteEscritasConcorrentes {
     public static void main(final String[] args) {
         final Serializer s = Util.getSerializer();
-        final ManagedMessagingService ms = NettyMessagingService.builder().withAddress(Address.from(22220)).build();
+        final ManagedMessagingService ms = NettyMessagingService.builder().withAddress(Address.from("localhost:22222")).build();
         final ExecutorService es = Executors.newSingleThreadExecutor();
         Map<Long, byte[]> t1 = new HashMap<>();
         Map<Long, byte[]> t2 = new HashMap<>();
