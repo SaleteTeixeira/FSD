@@ -13,10 +13,10 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class TesteEscritasConcorrentes {
+public class Teste2PC_Simple {
     public static void main(final String[] args) {
         final Serializer s = Util.getSerializer();
-        final ManagedMessagingService ms = NettyMessagingService.builder().withAddress(Address.from(22220)).build();
+        final ManagedMessagingService ms = NettyMessagingService.builder().withAddress(Address.from("localhost:12349")).build();
         final ExecutorService es = Executors.newSingleThreadExecutor();
         Map<Long, byte[]> t1 = new HashMap<>();
         Map<Long, byte[]> t2 = new HashMap<>();
@@ -50,17 +50,8 @@ public class TesteEscritasConcorrentes {
         t1.put((long) 3, kc1.getBytes());
         t2.put((long) 4, kd2.getBytes());
 
-
-        ms.sendAsync(Address.from(12345), "put", s.encode(new PutRequest(1, t1)));
-
-        /** para receber primeiro a t1 **/
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        ms.sendAsync(Address.from(12345), "put", s.encode(new PutRequest(0, t2)));
+        ms.sendAsync(Address.from(11110), "put", s.encode(new PutRequest(1, t1)));
+        ms.sendAsync(Address.from(11110), "put", s.encode(new PutRequest(0, t2)));
 
         keys.add((long) 1);
         keys.add((long) 2);
@@ -73,6 +64,6 @@ public class TesteEscritasConcorrentes {
             e.printStackTrace();
         }
 
-        ms.sendAsync(Address.from(12345), "get", s.encode(new GetRequest( 2, keys)));
+        ms.sendAsync(Address.from(11110), "get", s.encode(new GetRequest( 2, keys)));
     }
 }

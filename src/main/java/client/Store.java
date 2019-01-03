@@ -16,8 +16,8 @@ class Store implements common.Store {
     private final ManagedMessagingService ms;
 
     private int requestID = 0;
-    private final Map<Integer, CompletableFuture<Boolean>> putCompletableFutures;
     private final Map<Integer, CompletableFuture<Map<Long, byte[]>>> getCompletableFutures;
+    private final Map<Integer, CompletableFuture<Boolean>> putCompletableFutures;
 
     Store() {
         this.s = Util.getSerializer();
@@ -26,8 +26,11 @@ class Store implements common.Store {
                 .build();
         final ExecutorService es = Executors.newSingleThreadExecutor();
 
-        this.ms.registerHandler("put", this::handlePut, es);
         this.ms.registerHandler("get", this::handleGet, es);
+        this.ms.registerHandler("put", this::handlePut, es);
+
+        this.getCompletableFutures = new HashMap<>();
+        this.putCompletableFutures = new HashMap<>();
 
         try {
             this.ms.start().get();
@@ -35,48 +38,43 @@ class Store implements common.Store {
             e.printStackTrace();
             System.exit(1);
         }
-
-        this.putCompletableFutures = new HashMap<>();
-        this.getCompletableFutures = new HashMap<>();
     }
 
-    private void handlePut(final Address origin, final byte[] bytes) {
-        if (origin.equals(Util.getCoordinator())) {
-            final PutReply reply = this.s.decode(bytes);
-            this.putCompletableFutures.get(reply.getRequestID()).complete(reply.getValue());
-        }
-    }
-
-    private void handleGet(final Address origin, final byte[] bytes) {
-        if (origin.equals(Util.getCoordinator())) {
-            final GetReply reply = this.s.decode(bytes);
-            this.getCompletableFutures.get(reply.getRequestID()).complete(reply.getValues());
-        }
-    }
-
-    @Override
-    public CompletableFuture<Boolean> put(final Map<Long, byte[]> values) {
-        final CompletableFuture<Boolean> t = new CompletableFuture<>();
-        this.putCompletableFutures.put(this.requestID, t);
-
-        this.ms.sendAsync(Util.getCoordinator(),
-                "put",
-                this.s.encode(new PutRequest(this.requestID++, -1, values))
-        );
-
-        return t;
-    }
-
-    @Override
     public CompletableFuture<Map<Long, byte[]>> get(final Collection<Long> keys) {
         final CompletableFuture<Map<Long, byte[]>> t = new CompletableFuture<>();
         this.getCompletableFutures.put(this.requestID, t);
 
         this.ms.sendAsync(Util.getCoordinator(),
                 "get",
-                this.s.encode(new GetRequest(this.requestID++, -1, keys))
+                this.s.encode(new GetRequest(this.requestID++, keys))
         );
 
         return t;
+    }
+
+    public CompletableFuture<Boolean> put(final Map<Long, byte[]> values) {
+        final CompletableFuture<Boolean> t = new CompletableFuture<>();
+        this.putCompletableFutures.put(this.requestID, t);
+
+        this.ms.sendAsync(Util.getCoordinator(),
+                "put",
+                this.s.encode(new PutRequest(this.requestID++, values))
+        );
+
+        return t;
+    }
+
+    public void handleGet(final Address origin, final byte[] bytes) {
+        if (origin.equals(Util.getCoordinator())) {
+            final GetReply reply = this.s.decode(bytes);
+            this.getCompletableFutures.get(reply.getReq_tran_ID()).complete(reply.getValues());
+        }
+    }
+
+    public void handlePut(final Address origin, final byte[] bytes) {
+        if (origin.equals(Util.getCoordinator())) {
+            final PutReply reply = this.s.decode(bytes);
+            this.putCompletableFutures.get(reply.getReq_tran_ID()).complete(reply.getValue());
+        }
     }
 }

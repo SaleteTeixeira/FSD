@@ -1,11 +1,16 @@
 package common;
 
-import io.atomix.utils.net.Address;
-
-import java.util.Collection;
-import java.util.concurrent.CompletableFuture;
-
 public interface TwoPhaseCommit {
 
-    CompletableFuture<Boolean> start(final int transactionID, final Collection<Address> participants);
+    void changeStatus(final int idT, final String status);
+
+    void commit(final int transactionID);
+
+    void rollback(final int transactionID);
+
+    void restart();
+
+    void logToString();
+
+    String logTidLastStatus(final int idT);
 }

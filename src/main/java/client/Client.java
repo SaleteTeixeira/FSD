@@ -2,7 +2,6 @@ package client;
 
 import java.util.*;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 public class Client {
     private final static Random random = new Random();
@@ -57,7 +56,7 @@ public class Client {
     }
 
     public static void main(final String[] args) {
-        final int numOps = 10; // Total number of gets + puts
+        final int numOps = 5; // Total number of gets + puts
         final int maxNumKeys = 20; // Maximum number of keys in a single request
         //final int keyUpperBound = Integer.MAX_VALUE; // Upper bound of a given key
         final int keyUpperBound = 10; // Upper bound of a given key

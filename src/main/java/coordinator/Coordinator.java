@@ -14,40 +14,33 @@ public class Coordinator {
     public static void main(final String[] args) {
         final Serializer s = Util.getSerializer();
         final ManagedMessagingService ms = NettyMessagingService.builder()
-                                                                .withAddress(Address.from("localhost:11110"))
-                                                                .build();
+                .withAddress(Address.from("localhost:11110"))
+                .build();
         final ExecutorService es = Executors.newSingleThreadExecutor();
         final Store store = new Store();
-
-        ms.registerHandler("put", (o,m) -> {
-            final PutRequest request = s.decode(m);
-
-            System.out.println(request.toString());
-
-            store.put(request.getRequestID(), request.getValues()).thenAccept((bool) -> {
-                ms.sendAsync(o,
-                    "put",
-                    s.encode(new PutReply(request.getRequestID(), -1, bool))
-                );
-            });
-        }, es);
 
         ms.registerHandler("get", (o,m) -> {
             final GetRequest request = s.decode(m);
 
             System.out.println(request.toString());
 
-            store.get(request.getRequestID(), request.getKeys()).thenAccept((map) -> {
-                ms.sendAsync(o,
-                    "get",
-                    s.encode(new GetReply(request.getRequestID(), -1, map))
-                );
+            store.get(request.getKeys()).thenAccept((map) -> {
+                ms.sendAsync(o, "get", s.encode(new GetReply(request.getReq_tran_ID(), map)));
+            });
+        }, es);
+
+        ms.registerHandler("put", (o,m) -> {
+            final PutRequest request = s.decode(m);
+
+            System.out.println(request.toString());
+
+            store.put(o, request.getReq_tran_ID(), request.getValues()).thenAccept((bool) -> {
+                ms.sendAsync(o, "put", s.encode(new PutReply(request.getReq_tran_ID(), bool)));
             });
         }, es);
 
         try {
             ms.start().get();
-
         } catch (final InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }

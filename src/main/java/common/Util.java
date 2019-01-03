@@ -21,14 +21,18 @@ public class Util {
 
     public static String valuesToString(final Map<Long, byte[]> values) {
         final StringBuilder s = new StringBuilder();
+        boolean first = true;
 
         for (final Map.Entry<Long, byte[]> a : values.entrySet()) {
+            if(!first) s.append(", ");
+            else first=false;
+
             s.append(a.getKey());
             String b = "null";
             if (a.getValue() != null) {
                 b = new String(a.getValue());
             }
-            s.append(" ").append(b).append(", ");
+            s.append(" ").append(b);
         }
 
         return s.toString();

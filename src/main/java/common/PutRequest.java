@@ -5,8 +5,8 @@ import java.util.Map;
 public class PutRequest extends Message {
     private final Map<Long, byte[]> values;
 
-    public PutRequest(final int requestID, final int transactionID, final Map<Long, byte[]> values) {
-        super(requestID, transactionID);
+    public PutRequest(final int req_tran_ID, final Map<Long, byte[]> values) {
+        super(req_tran_ID);
         this.values = values;
     }
 

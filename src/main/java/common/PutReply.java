@@ -3,8 +3,8 @@ package common;
 public class PutReply extends Message {
     private final boolean value;
 
-    public PutReply(final int requestID, final int transactionID, final boolean value) {
-        super(requestID, transactionID);
+    public PutReply(final int req_tran_ID, final boolean value) {
+        super(req_tran_ID);
         this.value = value;
     }
 
@@ -16,7 +16,7 @@ public class PutReply extends Message {
     public String toString() {
         return super.toString() +
                 "PutReply{" +
-                "value=" + this.value +
+                "value = " + this.value +
                 "}}";
     }
 }
