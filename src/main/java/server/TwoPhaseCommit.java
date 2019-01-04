@@ -15,17 +15,23 @@ public class TwoPhaseCommit implements common.TwoPhaseCommitParticipants {
 
     private Serializer s, sl;
     private ManagedMessagingService ms;
-    private ExecutorService es;
     private final Address coordAdd;
+    private final String serverPort;
     private SegmentedJournal<Object> log;
     private SegmentedJournalWriter<Object> writer;
     SegmentedJournalReader<Object> reader;
 
-    TwoPhaseCommit(Serializer s, ManagedMessagingService ms, ExecutorService es, Address coordAdd, String logName){
+    TwoPhaseCommit(Serializer s, ManagedMessagingService ms, ExecutorService es, Address coordAdd, String logName, String serverPort){
         this.s = s;
         this.ms = ms;
-        this.es = es;
+
+        this.ms.registerHandler("prepared", this::handle2PC_Prepared, es);
+        this.ms.registerHandler("commit", this::handle2PC_Commit, es);
+        this.ms.registerHandler("rollback", this::handle2PC_Rollback, es);
+
         this.coordAdd = coordAdd;
+        this.serverPort = serverPort;
+
         this.sl = Serializer.builder()
                 .withTypes(ServerLog.class)
                 .build();
@@ -34,6 +40,68 @@ public class TwoPhaseCommit implements common.TwoPhaseCommitParticipants {
                 .withSerializer(sl)
                 .build();
         this.writer = this.log.writer();
+    }
+
+    public void handle2PC_Prepared(final Address origin, final byte[] bytes) {
+        if (origin.equals(coordAdd)){
+            int reply_idT = s.decode(bytes);
+
+            /**testar caso em que o Servidor reinicia com status="", com timeCounter=15s
+             * OU testar abort do repeatProcess para timeCounter=1ms**/
+                /*try {
+                    System.out.println("Going to sleep with status=\""+this.logTidLastStatus(reply_idT)+"\" for transaction "+reply_idT);
+                    Thread.sleep(10000);
+                    System.out.println("Woke up!!!");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }*/
+
+            this.prepared(reply_idT, "yes");
+            this.logToString();
+            System.out.println("Server "+this.serverPort+" prepared for transaction "+ reply_idT);
+        }
+    }
+
+    public void handle2PC_Commit(final Address origin, final byte[] bytes) {
+        if (origin.equals(coordAdd)) {
+            int reply_idT = s.decode(bytes);
+
+            /**testar caso em que o Servidor reinicia com status=P, com timeCounter=15s
+             * OU testar abort do repeatProcess para timeCounter=1ms**/
+                /*try {
+                    System.out.println("Going to sleep with status=\""+this.logTidLastStatus(reply_idT)+"\" for transaction "+reply_idT);
+                    Thread.sleep(10000);
+                    System.out.println("Woke up!!!");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }*/
+
+            this.commit(reply_idT);
+            this.logToString();
+            System.out.println("Transaction " + reply_idT + " commited by server " + this.serverPort);
+        }
+    }
+
+    public void handle2PC_Rollback(final Address origin, final byte[] bytes) {
+        if (origin.equals(coordAdd)) {
+            int reply_idT = s.decode(bytes);
+
+            /**testar caso em que o Servidor reinicia com status=P, com timeCounter=15s
+             * OU testar abort do repeatProcess para timeCounter=1ms**/
+                /*try {
+                    System.out.println("Going to sleep with status=\""+this.logTidLastStatus(reply_idT)+"\" for transaction "+reply_idT);
+                    Thread.sleep(10000);
+                    System.out.println("Woke up!!!");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }*/
+
+            this.rollback(reply_idT);
+            this.ms.sendAsync(Address.from("localhost:"+this.serverPort), "restartStore", this.s.encode("store"));
+
+            this.logToString();
+            System.out.println("Transaction " + reply_idT + " aborted by server " + this.serverPort);
+        }
     }
 
     public void logToString(){
@@ -65,7 +133,7 @@ public class TwoPhaseCommit implements common.TwoPhaseCommitParticipants {
         }
     }
 
-    public void start(final int transactionID, Map<Long,byte[]> values) {
+    public void writeLog(final int transactionID, Map<Long,byte[]> values) {
         this.writer.append(new ServerLog(transactionID, values, ""));
         this.writer.flush();
     }
@@ -153,3 +221,6 @@ public class TwoPhaseCommit implements common.TwoPhaseCommitParticipants {
         }
     }
 }
+
+
+
